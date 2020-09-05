@@ -1,0 +1,189 @@
+import pygame
+import random
+import math
+from pygame import mixer_music
+from pygame import mixer
+
+# Initialize the pygame
+pygame.init()
+# create the screen
+screen = pygame.display.set_mode((800, 600))
+
+# title and logo and SOUND
+pygame.display.set_caption("Space Invaders")
+icon = pygame.image.load("spaceship.jpg")
+pygame.display.set_icon(icon)
+# background image
+back = pygame.image.load("spaceback.jpg")
+backImage = pygame.transform.scale(back, [800, 600])
+# sound and music
+mixer.music.load("background.wav")
+mixer.music.play(-1)
+explosion_sound = mixer.Sound("explosion.wav")
+laser_sound = mixer.Sound("laser.wav")
+
+# FONT STUFF
+score_value = 0
+font = pygame.font.Font("freesansbold.ttf", 32)
+textX = 10
+textY = 10
+def show_score(x, y):
+    score = font.render("Score: " + str(score_value), True, (255, 255, 255))
+    screen.blit(score, (x,y))
+
+# GAME OVER TEXT
+GameOverFont = pygame.font.Font("freesansbold.ttf", 40)
+GameOverTextX = 225
+GameOverTextY = 250
+GameOverScoreX = 280
+GameOverScoreY = 150
+def gameOver():
+    GameOverScore = GameOverFont.render("Final Score: " + str(score_value), True, (255, 255, 255))
+    GameOverText = GameOverFont.render("GAME OVER, FOOL", True, (255, 255, 255))
+    screen.blit(GameOverScore, (GameOverScoreX, GameOverScoreY))
+    screen.blit(GameOverText, (GameOverTextX, GameOverTextY))
+
+
+# player
+player = pygame.image.load("spaceship.png")
+playerImg = pygame.transform.scale(player, [50, 50])
+playerX = 300
+playerY = 480
+playerX_change = 0
+
+def player(xbasic, ybasic):
+    screen.blit(playerImg, (round(xbasic), round(ybasic)))
+
+# enemy aliens
+alien = pygame.image.load("space-invaders.png")
+alienImg = []
+alienX = []
+alienY = []
+alienX_change_0 = []
+alienX_change = []
+num_Of_Aliens = 6
+for i in range(num_Of_Aliens):
+    # alien image
+    alienImg.append(pygame.transform.scale(alien, [50,50]))
+    alienX.append(random.randint(0,749))
+    alienY.append(random.randint(50,150))
+#alien movement at beginning
+    randDir = random.choice([-15, 5])
+    alienX_change_0.append(randDir)
+    alienX_change.append(alienX_change_0[i])
+# alien defined
+def alien(x,y, i):
+    screen.blit(alienImg[i], (round(x), round(y)))
+
+# laser
+laser = pygame.image.load("laser.png")
+laserImg = pygame.transform.scale(laser, [50,50])
+
+# laser movement
+laser_state = "ready"
+laserX = 300
+laserY = 480
+
+def laserShot(x,y):
+    global laser_state
+    laser_state = "fire"
+    screen.blit(laserImg, (round(x), round(y + 10)))
+
+# when we hit the boy
+def isCollision(x1, y1, x2, y2):
+    distance = math.sqrt(math.pow((x1 - x2), 2) + math.pow((y1 - y2), 2))
+    if distance < 20:
+        return True
+    else:
+        return False
+
+
+    laser_state = "ready"
+
+
+# game loop
+running = True
+
+while running:
+
+    # rgb color
+    screen.fill((1, 1, 1))
+
+    # Background
+    screen.blit(backImage, (0, 0))
+
+    # keystroke
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                playerX_change -= 0.5
+            if event.key == pygame.K_RIGHT:
+                playerX_change += 0.5
+            if event.key == pygame.K_SPACE:
+                laser_sound.play()
+                laserX = playerX
+                laserShot(laserX, laserY)
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_LEFT:
+                playerX_change += 0.5
+            if event.key == pygame.K_RIGHT:
+                playerX_change -= 0.5
+
+    # player movement
+    playerX += playerX_change
+    if playerX > 750:
+        playerX = 750
+    if playerX < 0:
+        playerX = 0
+
+
+   # looping through all aliens
+    for i in range(num_Of_Aliens):
+
+        #game over event
+        if alienY[i] > 450:
+            for j in range(num_Of_Aliens):
+                alienY[j] = 2000
+            gameOver()
+
+        # alien movement at boundarieS
+        if alienX[i] > 750:
+            alienX[i] = 750
+            alienX_change[i] = -5
+            alienY[i] += 30
+        elif alienX[i] < 0:
+            alienX[i] = 0
+            alienX_change[i] = 5
+            alienY[i] += 30
+
+         # alien coordinate calculation, and calling alien function
+        alienX[i] = alienX[i] + alienX_change[i]
+        alien(alienX[i], alienY[i], i)
+
+        # check for a collision
+        collision = isCollision(alienX[i], alienY[i], laserX, laserY)
+        if collision:
+            explosion_sound.play()
+            laserY = 480
+            laser_state = "ready"
+            score_value += 1
+            print(score_value)
+            alienX[i] = random.randint(0, 749)
+            alienY[i] = random.randint(50, 150)
+
+    # laser fire
+    if laser_state == "fire":
+        laserShot(laserX, laserY)
+        laserY -= 10
+    if laserY < 0:
+        laserY = 480
+        laser_state = "ready"
+
+
+    #calling player function
+    player(playerX, playerY)
+    show_score(textX,textY)
+    pygame.display.update()
